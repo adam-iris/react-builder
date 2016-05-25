@@ -33,18 +33,31 @@ var ToggleTextInput = React.createClass({
 });
 */
 
+function extend(o1, o2, add_super) {
+  var o3 = {};
+  for (var i in o2) {
+    o3[i] = o2[i];
+  }
+  for (var i in o1) {
+    if (o3[i]) {
+      if (add_super) {
+        o3['super_'+i] = o1[i];
+      }
+    } else {
+      o3[i] = o1[i];
+    }
+  }
+  return o3;
+}
+
 var BaseFieldDef = {
   handleToggle: function(evt) {
-    if (evt.target.checked) {
-      console.log("checked");
-    } else {
-      if (this.props.onChange) {
-        this.props.onChange(this.props.name, "");
-      }
+    if (this.props.onChange) {
+      this.props.onChange(this.props.name + "_check", evt.target.checked);
     }
   },
   renderCheckbox: function() {
-    var input = this.renderInput();
+    var input = this.renderInput(true);
     return (
       <span>
         <input type="checkbox" onClick={this.handleToggle} />
@@ -58,8 +71,8 @@ var BaseFieldDef = {
       this.props.onChange(this.props.name, evt.target.value);
     }
   },
-  renderInput: function() {
-    var value = this.props.query[this.props.name];
+  renderInput: function(disabled) {
+    var value = this.props.form[this.props.name];
     return (
       <input type="text" value={value} onChange={this.handleChange} />
     );
@@ -74,29 +87,76 @@ var BaseFieldDef = {
     );
   }
 };
+var TextFieldDef = extend(BaseFieldDef, {}, true);
+var TextField = React.createClass(TextFieldDef);
 
-var TextField = React.createClass(BaseFieldDef);
+var CheckboxMixin = (function(){
+    var stateVar1 = "foo";
+
+    return { // the mixin object, all functions here will be "mixed into" the component
+        componentDidMount: function() { // will be called before your component's componentDidMount
+            console.log(this.state); // outputs the components state
+            console.log(stateVar1); // outputs the closure's stateVar1 variable
+        }
+    };
+}());
+
+var CheckboxTextFieldDef = extend(TextFieldDef, {
+  renderInput: function() {
+    var input = this.super_renderInput(true);
+    return (
+      <span>
+        <input type="checkbox" onClick={this.handleToggle} />
+        {input}
+      </span>
+    );
+  }
+}, true);
+var CheckboxTextField = React.createClass(CheckboxTextFieldDef);
+
+
 
 var Builder = React.createClass({
   getInitialState: function() {
     return {
-      net: "IU",
-      sta: "*",
-      loc: "",
-      cha: "",
-      starttime: ""
+      form: {
+        net: "IU",
+        sta: "*",
+        loc: "",
+        cha: "",
+        starttime: ""
+      },
+      query: {}
     };
   },
-  handleChange: function(key, value) {
+  formToQuery: function(form) {
+    var query = {};
+    for (var key in form) {
+      if (key.substr(-6) == '_check') {
+      }
+      else {
+        var check = form[key + '_check'];
+        if (check !== false) {
+          query[key] = form[key]; 
+        }
+      }
+    }
+    console.log(form);
+    console.log(query);
+    return query;
+  },
+  handleFormChange: function(key, value) {
     console.log('Builder.handleChange: ' + key + ', ' + value);
     var partialState = {};
-    partialState[key] = value;
+    partialState.form = extend(this.state.form, {});
+    partialState.form[key] = value;
+    partialState.query = this.formToQuery(partialState.form);
     this.setState(partialState);
   },
   render: function() {
     var common = {
-      onChange: this.handleChange,
-      query: this.state
+      onChange: this.handleFormChange,
+      form: this.state.form
     };
     var rows = [
       ['Network', (<TextField name="net" label="Network" {...common} />)],
@@ -110,7 +170,7 @@ var Builder = React.createClass({
         
         <TextField checkbox="true" name="starttime" label="Start Time" {...common} />
       
-        quary?net={this.state.net}&sta={this.state.sta}&loc={this.state.loc}&cha={this.state.cha}&starttime={this.state.starttime}
+        quary?net={this.state.query.net}&sta={this.state.query.sta}&loc={this.state.query.loc}&cha={this.state.query.cha}&starttime={this.state.query.starttime}
       </div>
     );
   }
