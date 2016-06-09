@@ -33,6 +33,10 @@ var ToggleTextInput = React.createClass({
 });
 */
 
+/* Simple extend function
+ * This extends objects, not classes, because they go into React.createClass, which actually makes things simple.
+ * Anything "overridden" is copied into super_xxx, eg. obj.foo() / obj.super_foo()
+ */
 function extend(o1, o2, add_super) {
   var o3 = {};
   for (var i in o2) {
@@ -66,7 +70,7 @@ var BaseFieldDef = {
     );
   },
   handleChange: function(evt) {
-    console.log('TextField.handleChange');
+    console.log('BaseFieldDef.handleChange');
     if (this.props.onChange) {
       this.props.onChange(this.props.name, evt.target.value);
     }
@@ -74,7 +78,7 @@ var BaseFieldDef = {
   renderInput: function(disabled) {
     var value = this.props.form[this.props.name];
     return (
-      <input type="text" value={value} onChange={this.handleChange} />
+      <input type="text" name={this.props.name} value={value} onChange={this.handleChange} />
     );
   },
   render: function() {
@@ -90,30 +94,25 @@ var BaseFieldDef = {
 var TextFieldDef = extend(BaseFieldDef, {}, true);
 var TextField = React.createClass(TextFieldDef);
 
-var CheckboxMixin = (function(){
-    var stateVar1 = "foo";
+var CheckboxMixin = {
+    renderInput: function() {
+        var input = this.super_renderInput(true);
+        return (
+          <span>
+            <input type="checkbox" onClick={this.handleToggle} />
+            {input}
+          </span>
+        );
+    },
+    componentDidMount: function() { // will be called before your component's componentDidMount
+        console.log(this.state); // outputs the components state
+        console.log(stateVar1); // outputs the closure's stateVar1 variable
+    }
+};
 
-    return { // the mixin object, all functions here will be "mixed into" the component
-        componentDidMount: function() { // will be called before your component's componentDidMount
-            console.log(this.state); // outputs the components state
-            console.log(stateVar1); // outputs the closure's stateVar1 variable
-        }
-    };
-}());
-
-var CheckboxTextFieldDef = extend(TextFieldDef, {
-  renderInput: function() {
-    var input = this.super_renderInput(true);
-    return (
-      <span>
-        <input type="checkbox" onClick={this.handleToggle} />
-        {input}
-      </span>
-    );
-  }
-}, true);
-var CheckboxTextField = React.createClass(CheckboxTextFieldDef);
-
+var CheckboxTextField = React.createClass(
+    extend(TextFieldDef, CheckboxMixin, true)
+);
 
 
 var Builder = React.createClass({
@@ -124,9 +123,12 @@ var Builder = React.createClass({
         sta: "*",
         loc: "",
         cha: "",
-        starttime: ""
+        starttime: "2015-01-01",
+        starttime_check: false
       },
-      query: {}
+      query: {},
+      queryKeys: [],
+      queryString: ""
     };
   },
   formToQuery: function(form) {
@@ -137,21 +139,42 @@ var Builder = React.createClass({
       else {
         var check = form[key + '_check'];
         if (check !== false) {
-          query[key] = form[key]; 
+          query[key] = form[key];
         }
       }
     }
-    console.log(form);
-    console.log(query);
     return query;
+  },
+  queryString: function(query) {
+      var queryKeys = null;
+      if (!queryKeys) {
+          queryKeys = ['net'];
+          for (var k in query) { queryKeys.push(k); }
+      }
+      console.log('query:', query);
+      console.log('queryKeys: ', queryKeys);
+      var queryParams = [];
+      queryKeys.forEach(function(k) {
+          if (query[k] !== undefined && query[k] !== '') {
+              queryParams.push('' + k + '=' + escape(query[k]));
+          }
+      });
+      return queryParams.join('&');
   },
   handleFormChange: function(key, value) {
     console.log('Builder.handleChange: ' + key + ', ' + value);
     var partialState = {};
     partialState.form = extend(this.state.form, {});
-    partialState.form[key] = value;
+    if (key) {
+        partialState.form[key] = value;
+    }
     partialState.query = this.formToQuery(partialState.form);
+    partialState.queryString = this.queryString(partialState.query);
+    console.log(partialState);
     this.setState(partialState);
+  },
+  componentDidMount: function() {
+    this.handleFormChange();
   },
   render: function() {
     var common = {
@@ -167,10 +190,10 @@ var Builder = React.createClass({
         <TextField name="sta" label="Station" {...common} />
         <TextField name="loc" label="Location" {...common} />
         <TextField name="cha" label="Channel" {...common} />
-        
-        <TextField checkbox="true" name="starttime" label="Start Time" {...common} />
-      
-        quary?net={this.state.query.net}&sta={this.state.query.sta}&loc={this.state.query.loc}&cha={this.state.query.cha}&starttime={this.state.query.starttime}
+
+        <TextField checkbox="true" name="starttime" label="Start Time" value="2015-01-01" {...common} />
+
+        query?{this.state.queryString}
       </div>
     );
   }
