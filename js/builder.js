@@ -77,7 +77,7 @@ var BaseFieldDef = {
     renderInput: function(disabled) {
         var value = this.props.form[this.props.name];
         return (
-            <input type="text" name={this.props.name} value={value} onChange={this.handleChange} />
+            <input type="text" name={this.props.name} defaultValue={value} onChange={this.handleChange} />
         );
     },
     render: function() {
@@ -109,11 +109,16 @@ var TextFieldDef = {
     },
     renderInput: function(disabled) {
       return (
-        <input type="text" name={this.state.name} value={this.state.value} onChange={this.handleChange} />
+        <input type="text" disabled={disabled} name={this.state.name} defaultValue={this.state.value} onChange={this.handleChange} />
       );
     },
     render: function() {
-        return this.renderInput();
+        return (
+            <div>
+                <label>{this.props.label}</label>
+                {this.renderInput()}
+            </div>
+        );
     }
 };
 
@@ -123,7 +128,7 @@ var TextField = React.createClass(TextFieldDef);
 var CheckboxWrapper = React.createClass({
     getInitialState: function() {
         return {
-            checked: this.props.checked
+            checked: this.props.defaultChecked
         };
     },
     contributeToForm: function() {
@@ -143,6 +148,9 @@ var CheckboxWrapper = React.createClass({
     },
     handleToggle: function(evt) {
         this.setState({checked: evt.target.checked});
+        if (this.props.onChange) {
+            this.props.onChange(this.state.name, value);
+        }
     },
     render: function() {
         return (
@@ -157,25 +165,32 @@ var CheckboxWrapper = React.createClass({
 var CheckboxMixin = {
     getInitialState: function() {
         var state = this.super_getInitialState();
-        state.checked = this.props.checked;
-        return state;
+        var checkbox_name = this.props.name + "_check";
+        return extend(state, {
+            checkbox_name: checkbox_name,
+            checked: this.props.form[checkbox_name]
+        });
     },
-    renderInput: function() {
-        var input = this.super_renderInput(!this.state.checked);
+    renderInput: function(disabled) {
+        var input = this.super_renderInput(disabled || !this.state.checked);
         return (
           <span>
-            <input type="checkbox" checked={this.state.checked} onClick={this.handleToggle} />
+            <input type="checkbox" defaultChecked={this.state.checked} onClick={this.handleToggle} />
             {input}
           </span>
         );
     },
     handleToggle: function(evt) {
-        this.setState({checked: evt.target.checked});
+        var checked = evt.target.checked;
+        this.setState({checked: checked});
+        if (this.props.onChange) {
+            this.props.onChange(this.state.checkbox_name, checked);
+        }
     }
 };
 
 var CheckboxTextField = React.createClass(
-    extend(TextFieldDef, CheckboxMixin, true)
+    extend(TextFieldDef, CheckboxMixin)
 );
 
 
@@ -246,8 +261,8 @@ var Builder = React.createClass({
             form: this.state.form
         };
         var rows = [
-            (<TextField key="net" label="Network" {...common} />),
-            (<CheckboxWrapper key="net2"><TextField name="net2" label="Network" {...common} /></CheckboxWrapper>),
+            (<TextField name="net" label="Network" {...common} />),
+            (<CheckboxWrapper name="net2_check"><TextField name="net2" label="Network" {...common} /></CheckboxWrapper>),
         ];
         return (
             <div>
@@ -256,7 +271,7 @@ var Builder = React.createClass({
                 <TextField name="loc" label="Location" {...common} />
                 <TextField name="cha" label="Channel" {...common} />
 
-                <CheckboxTextField name="starttime" label="Start Time" value="2015-01-01" {...common} />
+                <CheckboxTextField name="starttime" label="Start Time" defaultValue="2015-01-01" {...common} />
 
                 query?{this.state.queryString}
             </div>
