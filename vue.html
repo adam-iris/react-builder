@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Vue Builder</title>
+    <script src="http://code.jquery.com/jquery-3.1.1.slim.js"
+      integrity="sha256-5i/mQ300M779N2OVDrl16lbohwXNUdzL/R2aVUXyXWA="
+      crossorigin="anonymous"></script>
+    <script src="js/vue/vue.js"></script>
+    <script src="js/vue-builder.js"></script>
+    <script>
+$(function() {
+  window.vueWidget = new Vue({
+    el: '#builder',
+    data: {
+      fields: {
+        name: 'IU'
+      }
+    }
+  });
+});
+    </script>
+    <link rel="stylesheet" href="css/builder.css">
+  </head>
+  <body>
+    Builder is here:
+    <div style="border:1px solid #ddd">
+    <div id="builder">
+      <builder :fields="fields">
+        <text-input label="Name" v-model="fields.name"></text-input>
+      </builder>
+    </div>
+  </body>
+</html>
